@@ -130,12 +130,51 @@ async function main() {
     )} units of voting power after delegating\n`
   );
 
+  // Mint additional tokens to the deployer to increase voting power
+  console.log("Minting additional tokens to increase voting power...");
+  const additionalMintValue = parseEther("70");
+  const additionalMintTx = await deployer.writeContract({
+    address: tokenContractAddress!,
+    abi: myToken.abi,
+    functionName: "mint",
+    args: [deployer.account.address, additionalMintValue],
+  });
+  await publicClient.waitForTransactionReceipt({ hash: additionalMintTx });
+  console.log("Additional tokens minted to the deployer.");
+
+  // Delegate to self to update voting power
+  console.log("Delegating to self to update voting power...");
+  const delegateTx = await deployer.writeContract({
+    address: tokenContractAddress!,
+    abi: myToken.abi,
+    functionName: "delegate",
+    args: [deployer.account.address],
+  });
+  await publicClient.waitForTransactionReceipt({ hash: delegateTx });
+  console.log("Delegation to self complete.");
+
+  // Wait for a new block to be mined to ensure all changes are reflected
+  console.log("Waiting for a new block to ensure all changes are reflected...");
+
+  // Retrieve the updated voting power of the deployer account
+  const updatedVotesDeployer = await publicClient.readContract({
+    address: tokenContractAddress!,
+    abi: myToken.abi,
+    functionName: "getVotes",
+    args: [deployer.account.address],
+  });
+  console.log(
+    `Deployer ${deployer.account.address} has ${formatEther(
+      updatedVotesDeployer as bigint
+    )} units of voting power after minting additional tokens and self-delegating\n`
+  );
+
   // Get the current block number
   const blockNumber = await publicClient.getBlockNumber();
   console.log("Blocknumber is: ", blockNumber);
 
   // Define proposals for the Tokenized Ballot contract
-  const PROPOSALS = ["Vanilla", "Chocolate", "Strawberry"];
+  const PROPOSALS = ["P1", "P2", "P3"];
 
   // Deploy Tokenized Ballot contract
   console.log("\nDeploying Tokenized Ballot contract");
